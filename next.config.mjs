@@ -4,6 +4,7 @@ const nextConfig = {
   output: 'standalone',
   // Disable server components since we're doing client-side processing
   reactStrictMode: true,
+  // Configure image optimization
   images: {
     unoptimized: true
   },
