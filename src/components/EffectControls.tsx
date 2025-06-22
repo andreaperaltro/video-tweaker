@@ -1,6 +1,8 @@
 import * as Slider from '@radix-ui/react-slider'
 import { useVideoStore } from '@/store/videoStore'
 import { PlusIcon } from '@radix-ui/react-icons'
+import * as Select from '@radix-ui/react-select'
+import { ChevronDownIcon } from '@radix-ui/react-icons'
 
 export function EffectControls() {
   const effects = useVideoStore((state) => state.effects)
@@ -31,6 +33,12 @@ export function EffectControls() {
           >
             <PlusIcon className="w-4 h-4" /> Blur
           </button>
+          <button
+            onClick={() => addEffect('dither')}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" /> Dither
+          </button>
         </div>
       </div>
 
@@ -50,27 +58,96 @@ export function EffectControls() {
               </button>
             </div>
 
-            <Slider.Root
-              className="relative flex items-center select-none touch-none w-full h-5"
-              defaultValue={[0]}
-              min={-100}
-              max={100}
-              step={1}
-              onValueChange={([value]) => {
-                const params = {
-                  [effect.type]: value
-                }
-                updateEffect(effect.id, params)
-              }}
-            >
-              <Slider.Track className="bg-gray-200 dark:bg-gray-700 relative grow rounded-full h-[3px]">
-                <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
-              </Slider.Track>
-              <Slider.Thumb
-                className="block w-5 h-5 bg-white border-2 border-blue-500 rounded-full hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                aria-label="Effect value"
-              />
-            </Slider.Root>
+            {effect.type === 'dither' ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Pattern</label>
+                  <Select.Root
+                    value={effect.params.dither?.pattern ?? 'floyd-steinberg'}
+                    onValueChange={(value) => {
+                      updateEffect(effect.id, {
+                        dither: {
+                          ...effect.params.dither,
+                          pattern: value as 'floyd-steinberg' | 'ordered' | 'atkinson'
+                        }
+                      })
+                    }}
+                  >
+                    <Select.Trigger className="inline-flex items-center justify-between w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                      <Select.Value />
+                      <Select.Icon>
+                        <ChevronDownIcon />
+                      </Select.Icon>
+                    </Select.Trigger>
+
+                    <Select.Portal>
+                      <Select.Content className="overflow-hidden bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg">
+                        <Select.Viewport>
+                          <Select.Item value="floyd-steinberg" className="px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer outline-none">
+                            <Select.ItemText>Floyd-Steinberg</Select.ItemText>
+                          </Select.Item>
+                          <Select.Item value="ordered" className="px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer outline-none">
+                            <Select.ItemText>Ordered</Select.ItemText>
+                          </Select.Item>
+                          <Select.Item value="atkinson" className="px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer outline-none">
+                            <Select.ItemText>Atkinson</Select.ItemText>
+                          </Select.Item>
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Threshold</label>
+                  <Slider.Root
+                    className="relative flex items-center select-none touch-none w-full h-5"
+                    value={[effect.params.dither?.threshold ?? 128]}
+                    min={0}
+                    max={255}
+                    step={1}
+                    onValueChange={([value]) => {
+                      updateEffect(effect.id, {
+                        dither: {
+                          ...effect.params.dither,
+                          threshold: value
+                        }
+                      })
+                    }}
+                  >
+                    <Slider.Track className="bg-gray-200 dark:bg-gray-700 relative grow rounded-full h-[3px]">
+                      <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
+                    </Slider.Track>
+                    <Slider.Thumb
+                      className="block w-5 h-5 bg-white border-2 border-blue-500 rounded-full hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      aria-label="Threshold value"
+                    />
+                  </Slider.Root>
+                </div>
+              </div>
+            ) : (
+              <Slider.Root
+                className="relative flex items-center select-none touch-none w-full h-5"
+                defaultValue={[0]}
+                min={-100}
+                max={100}
+                step={1}
+                onValueChange={([value]) => {
+                  const params = {
+                    [effect.type]: value
+                  }
+                  updateEffect(effect.id, params)
+                }}
+              >
+                <Slider.Track className="bg-gray-200 dark:bg-gray-700 relative grow rounded-full h-[3px]">
+                  <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
+                </Slider.Track>
+                <Slider.Thumb
+                  className="block w-5 h-5 bg-white border-2 border-blue-500 rounded-full hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  aria-label="Effect value"
+                />
+              </Slider.Root>
+            )}
           </div>
         ))}
       </div>

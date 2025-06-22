@@ -1,5 +1,26 @@
 import { VideoEffect } from '@/store/videoStore'
 
+// Add dithering patterns
+const DITHER_PATTERNS = {
+  'floyd-steinberg': [
+    [0, 0, 7/16],
+    [-1, 1, 3/16],
+    [0, 1, 5/16],
+    [1, 1, 1/16]
+  ],
+  'atkinson': [
+    [1, 0, 1/8],
+    [2, 0, 1/8],
+    [-1, 1, 1/8],
+    [0, 1, 1/8],
+    [1, 1, 1/8],
+    [0, 2, 1/8]
+  ],
+  'ordered': [
+    [0, 0, 1]
+  ]
+} as const
+
 export function processFrame(
   ctx: CanvasRenderingContext2D,
   video: HTMLVideoElement,
@@ -57,6 +78,13 @@ export function processFrame(
         case 'contrast':
           applyContrast(tempCtx, effect.params.contrast || 0)
           break
+        case 'dither':
+          applyDither(
+            tempCtx, 
+            effect.params.dither?.threshold ?? 128,
+            effect.params.dither?.pattern ?? 'floyd-steinberg'
+          )
+          break
       }
     })
     
@@ -106,5 +134,46 @@ function applyContrast(ctx: CanvasRenderingContext2D, value: number) {
     }
   }
 
+  ctx.putImageData(imageData, 0, 0)
+}
+
+function applyDither(
+  ctx: CanvasRenderingContext2D, 
+  threshold: number,
+  pattern: keyof typeof DITHER_PATTERNS
+) {
+  const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
+  const data = new Uint8ClampedArray(imageData.data)
+  const width = ctx.canvas.width
+  const height = ctx.canvas.height
+  const matrix = DITHER_PATTERNS[pattern]
+
+  // Convert to grayscale and apply threshold
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4
+      const gray = Math.floor((data[idx] + data[idx + 1] + data[idx + 2]) / 3)
+      const error = gray < threshold ? -gray : 255 - gray
+
+      // Set pixel to black or white
+      data[idx] = data[idx + 1] = data[idx + 2] = gray < threshold ? 0 : 255
+
+      // Distribute error to neighboring pixels
+      for (const [dx, dy, factor] of matrix) {
+        const nx = x + dx
+        const ny = y + dy
+
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          const nidx = (ny * width + nx) * 4
+          for (let c = 0; c < 3; c++) {
+            data[nidx + c] = Math.max(0, Math.min(255, data[nidx + c] + error * factor))
+          }
+        }
+      }
+    }
+  }
+
+  // Update image data
+  imageData.data.set(data)
   ctx.putImageData(imageData, 0, 0)
 } 
