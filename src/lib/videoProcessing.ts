@@ -5,38 +5,72 @@ export function processFrame(
   video: HTMLVideoElement,
   effects: VideoEffect[]
 ) {
-  // Reset any previous filters
-  ctx.filter = 'none'
-  
+  // Validate input dimensions
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    console.warn('Video dimensions not ready')
+    return
+  }
+
+  // Ensure canvas dimensions match video
+  if (ctx.canvas.width !== video.videoWidth || ctx.canvas.height !== video.videoHeight) {
+    ctx.canvas.width = video.videoWidth
+    ctx.canvas.height = video.videoHeight
+  }
+
+  // Validate canvas dimensions
+  if (ctx.canvas.width === 0 || ctx.canvas.height === 0) {
+    console.warn('Canvas dimensions are invalid')
+    return
+  }
+
   // Create a temporary canvas for compositing effects
   const tempCanvas = document.createElement('canvas')
   tempCanvas.width = ctx.canvas.width
   tempCanvas.height = ctx.canvas.height
-  const tempCtx = tempCanvas.getContext('2d')!
   
-  // Draw the original frame to temp canvas
-  tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height)
-  
-  // Apply pixel-based effects first
-  effects.forEach(effect => {
-    switch (effect.type) {
-      case 'brightness':
-        applyBrightness(tempCtx, effect.params.brightness || 0)
-        break
-      case 'contrast':
-        applyContrast(tempCtx, effect.params.contrast || 0)
-        break
-    }
-  })
-  
-  // Apply blur last as it's a filter-based effect
-  const blurEffect = effects.find(e => e.type === 'blur')
-  if (blurEffect && blurEffect.params.blur) {
-    ctx.filter = `blur(${blurEffect.params.blur}px)`
+  // Validate temp canvas dimensions
+  if (tempCanvas.width === 0 || tempCanvas.height === 0) {
+    console.warn('Temp canvas dimensions are invalid')
+    return
   }
+
+  const tempCtx = tempCanvas.getContext('2d')
+  if (!tempCtx) {
+    console.warn('Failed to get temp canvas context')
+    return
+  }
+
+  // Reset any previous filters
+  tempCtx.filter = 'none'
+  ctx.filter = 'none'
   
-  // Draw the final result
-  ctx.drawImage(tempCanvas, 0, 0)
+  try {
+    // Draw the original frame to temp canvas
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height)
+    
+    // Apply pixel-based effects first
+    effects.forEach(effect => {
+      switch (effect.type) {
+        case 'brightness':
+          applyBrightness(tempCtx, effect.params.brightness || 0)
+          break
+        case 'contrast':
+          applyContrast(tempCtx, effect.params.contrast || 0)
+          break
+      }
+    })
+    
+    // Apply blur last as it's a filter-based effect
+    const blurEffect = effects.find(e => e.type === 'blur')
+    if (blurEffect && blurEffect.params.blur) {
+      ctx.filter = `blur(${blurEffect.params.blur}px)`
+    }
+    
+    // Draw the final result
+    ctx.drawImage(tempCanvas, 0, 0, ctx.canvas.width, ctx.canvas.height)
+  } catch (error) {
+    console.error('Error processing video frame:', error)
+  }
 }
 
 function applyBrightness(ctx: CanvasRenderingContext2D, value: number) {

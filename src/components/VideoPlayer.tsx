@@ -18,12 +18,28 @@ export function VideoPlayer() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Set up video
+    // Reset video source
+    video.src = ''
+    
+    // Set up video with proper event handling
     video.src = videoUrl
+    
+    // Wait for video metadata to load before setting dimensions
     video.onloadedmetadata = () => {
+      // Set canvas dimensions
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
+      
+      // Initial frame draw
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Start playback
       video.play().catch(console.error)
+    }
+
+    // Handle video errors
+    video.onerror = (e) => {
+      console.error('Video loading error:', e)
     }
 
     // Cleanup
@@ -32,6 +48,8 @@ export function VideoPlayer() {
         cancelAnimationFrame(animationFrameRef.current)
       }
       video.src = ''
+      video.onloadedmetadata = null
+      video.onerror = null
     }
   }, [videoUrl])
 
@@ -40,6 +58,7 @@ export function VideoPlayer() {
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
+    if (video.videoWidth === 0 || video.videoHeight === 0) return // Skip if video dimensions aren't ready
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -50,7 +69,10 @@ export function VideoPlayer() {
       canvas.height = video.videoHeight
     }
 
-    processFrame(ctx, video, effects)
+    // Only process frame if we have valid dimensions
+    if (canvas.width > 0 && canvas.height > 0) {
+      processFrame(ctx, video, effects)
+    }
   }
 
   // Handle render loop separately
@@ -64,8 +86,9 @@ export function VideoPlayer() {
 
     function render() {
       if (!video || video.ended) return
+      if (!video.videoWidth || !video.videoHeight) return // Skip if video dimensions aren't ready
       if (!ctx) return
-
+      
       if (video.paused) {
         // Process a single frame if paused
         processSingleFrame()
@@ -94,7 +117,9 @@ export function VideoPlayer() {
     video.addEventListener('pause', handlePlayPause)
 
     // Process initial frame or start animation
-    render()
+    if (video.readyState >= 2) { // Check if video metadata is loaded
+      render()
+    }
 
     return () => {
       video.removeEventListener('play', handlePlayPause)
