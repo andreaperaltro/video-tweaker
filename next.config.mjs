@@ -1,16 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static exports for better performance
-  output: 'standalone',
   // Disable server components since we're doing client-side processing
   reactStrictMode: true,
   // Configure image optimization
   images: {
-    unoptimized: true
+    unoptimized: true,
+    domains: ['vercel.app']
   },
-  experimental: {
-    optimizeFonts: true
-  }
+  // Ensure proper transpilation
+  transpilePackages: [],
+  // Enable static page generation
+  output: 'export'
 }
 
 export default nextConfig 
